@@ -1,7 +1,7 @@
 # ABBIS-Lite
 
 A working technical slice of an interoperable blood-bank information system for Africa,
-built for the Terumo BCT Africa Hackathon 2026.
+built for  operate within complex health systems where information, infrastructure and operational processes vary between institutions, regions and countries.
 
 **Scope:** donor → collection → lab screening → inventory → hospital request → issue,
 with unit-level traceability, offline-first sync, a FHIR-aligned data model, and
