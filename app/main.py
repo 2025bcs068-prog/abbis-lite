@@ -3,10 +3,13 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import RedirectResponse
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.ai.forecast import demand_series, forecast
+from app.api.transfers import router as transfers_router
 from app.db import Base, SessionLocal, engine
 from app.models import (AuditLog, BloodBank, BloodUnit, Donor,
                         HospitalRequest, ScreeningResult)
@@ -23,6 +26,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="ABBIS-Lite", version="0.1.0", lifespan=lifespan)
+app.include_router(transfers_router)
 
 def get_db():
     with SessionLocal() as db:
@@ -167,3 +171,33 @@ def register_donor(body: DonorIn, db: Session = Depends(get_db), x_actor: str = 
     audit(db, x_actor, "register", "donor", donor.id, body.client_op_id, result)
     db.commit()
     return result
+
+@app.get("/forecast")
+def get_forecast(bank_id: str, blood_group: str, horizon: int = Query(7, ge=1, le=28),
+                 db: Session = Depends(get_db)):
+    if blood_group not in GROUPS:
+        raise HTTPException(422, "Invalid blood group")
+    series = demand_series(db, bank_id, blood_group)
+    if len(series) < 90:
+        raise HTTPException(422, "Not enough history (need at least 90 days)")
+    result = forecast(series, horizon)
+    stock = db.scalar(
+        select(func.count()).select_from(BloodUnit)
+        .where(BloodUnit.bank_id == bank_id, BloodUnit.blood_group == blood_group,
+               BloodUnit.status == "available", BloodUnit.expires_on >= date.today())
+    ) or 0
+    demand = round(sum(d["units"] for d in result["forecast"]), 1)
+    shortfall = max(0, round(demand - stock))
+    result.update({
+        "stock_on_hand": stock,
+        "projected_demand": demand,
+        "projected_shortfall": shortfall,
+        "suggestion": (f"Review a transfer of about {shortfall} {blood_group} units to this bank"
+                       if shortfall else "No action needed"),
+        "requires_human_approval": True,
+    })
+    return result
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse("/docs")

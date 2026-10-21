@@ -64,3 +64,20 @@ class AuditLog(Base):
     entity_id: Mapped[str] = mapped_column(String(36))
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class TransferSuggestion(Base):
+    """AI-proposed inter-bank stock transfer. Never executed without a recorded human decision."""
+    __tablename__ = "transfer_suggestions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    from_bank_id: Mapped[str] = mapped_column(ForeignKey("blood_banks.id"))
+    to_bank_id: Mapped[str] = mapped_column(ForeignKey("blood_banks.id"), index=True)
+    blood_group: Mapped[str] = mapped_column(String(3))
+    units: Mapped[int] = mapped_column(Integer)
+    rationale: Mapped[str] = mapped_column(Text)               # JSON: forecasts, stock, model, accuracy
+    model: Mapped[str] = mapped_column(String(30))
+    status: Mapped[str] = mapped_column(String(10), default="proposed")  # proposed | approved | rejected
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    decided_by: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    decision_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
