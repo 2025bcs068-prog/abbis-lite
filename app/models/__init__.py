@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from sqlalchemy import String, Integer, Date, DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base
@@ -63,4 +63,4 @@ class AuditLog(Base):
     entity: Mapped[str] = mapped_column(String(40))
     entity_id: Mapped[str] = mapped_column(String(36))
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
-    at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
