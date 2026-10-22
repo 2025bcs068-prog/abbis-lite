@@ -1,0 +1,4 @@
+STEP 1: stock of A+ before
+  before: Mbarara 32, Mulago 113, Gulu 101, Mbale 128
+
+STEP 2: the system forecasts demand and proposes a transfer (nothing moves yet)

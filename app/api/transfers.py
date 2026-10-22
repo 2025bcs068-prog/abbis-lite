@@ -81,7 +81,7 @@ def suggest(to_bank_id: str, blood_group: str, horizon: int = Query(7, ge=1, le=
                  "source_surplus_after_safety_margin": surplus,
                  "explanation": (f"Destination stock {target['stock']} vs forecast demand {target['demand']} "
                                  f"over {horizon} days. Source holds {source['stock']} against forecast demand "
-                                 f"{source['demand']} and keeps a {int((SAFETY_MARGIN - 1) * 100)}% margin.")}
+                                 f"{source['demand']} and keeps a {round((SAFETY_MARGIN - 1) * 100)}% margin.")}
     s = TransferSuggestion(from_bank_id=bank.id, to_bank_id=to_bank_id, blood_group=blood_group, units=qty,
                            rationale=json.dumps(rationale), model=target["model"])
     db.add(s)
