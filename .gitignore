@@ -4,3 +4,8 @@ __pycache__/
 *.db
 .env
 .pytest_cache/
+demo_credentials.json
+.apply_jwt_backup/
+demo_outbox.db
+client_outbox.db
+server.log

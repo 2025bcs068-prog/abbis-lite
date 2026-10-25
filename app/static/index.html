@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ABBIS-Lite: blood-bank network</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="drop" aria-hidden="true"></span><strong>ABBIS-Lite</strong><span class="tag">synthetic data</span></div>
+    <div id="who" hidden><span id="whoText"></span><button id="logout" type="button" class="ghost">Sign out</button></div>
+  </header>
+
+  <main>
+    <section id="login" aria-labelledby="loginTitle">
+      <h1 id="loginTitle">Sign in</h1>
+      <p class="muted">Access depends on your role: clinic, hospital, bank manager or national coordinator.</p>
+      <form id="loginForm">
+        <label><span>Username</span><input name="username" type="text" autocomplete="username" required></label>
+        <label><span>Password</span><input name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Sign in</button>
+      </form>
+    </section>
+
+    <section id="app" hidden>
+      <nav id="nav" aria-label="Sections"></nav>
+      <div id="view" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <footer>Hackathon prototype. All data is synthetic; no real donor or patient records.</footer>
+  <script src="app.js"></script>
+</body>
+</html>

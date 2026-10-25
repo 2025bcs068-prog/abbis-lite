@@ -3,13 +3,14 @@ import math
 from datetime import date, datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.ai.forecast import demand_series, forecast
-from app.models import BloodBank, BloodUnit, TransferSuggestion
+from app.models import BloodBank, BloodUnit, TransferSuggestion, User
+from app.security import enforce_bank, require
 from app.services.common import audit, get_db, replay
 
 router = APIRouter(prefix="/transfers", tags=["transfers"])
@@ -48,7 +49,9 @@ def serialize(s: TransferSuggestion):
 
 
 @router.post("/suggest")
-def suggest(to_bank_id: str, blood_group: str, horizon: int = Query(7, ge=1, le=28), db: Session = Depends(get_db)):
+def suggest(to_bank_id: str, blood_group: str, horizon: int = Query(7, ge=1, le=28), db: Session = Depends(get_db),
+            user: User = Depends(require("manager", "coordinator"))):
+    enforce_bank(user, to_bank_id)
     if blood_group not in GROUPS:
         raise HTTPException(422, "Invalid blood group")
     if not db.get(BloodBank, to_bank_id):
@@ -90,8 +93,11 @@ def suggest(to_bank_id: str, blood_group: str, horizon: int = Query(7, ge=1, le=
 
 
 @router.get("")
-def list_transfers(status: str | None = None, db: Session = Depends(get_db)):
+def list_transfers(status: str | None = None, db: Session = Depends(get_db),
+                   user: User = Depends(require("manager", "coordinator"))):
     q = select(TransferSuggestion).order_by(TransferSuggestion.created_at.desc())
+    if user.role == "manager":
+        q = q.where(or_(TransferSuggestion.from_bank_id == user.bank_id, TransferSuggestion.to_bank_id == user.bank_id))
     if status:
         q = q.where(TransferSuggestion.status == status)
     return [serialize(s) for s in db.scalars(q).all()]
@@ -99,12 +105,15 @@ def list_transfers(status: str | None = None, db: Session = Depends(get_db)):
 
 @router.post("/{suggestion_id}/decide")
 def decide(suggestion_id: str, body: DecisionIn, db: Session = Depends(get_db),
-           x_actor: str = Header(default="demo")):
+           user: User = Depends(require("manager", "coordinator"))):
+    x_actor = user.username
     if (r := replay(db, body.client_op_id)) is not None:
         return r
     s = db.get(TransferSuggestion, suggestion_id)
     if not s:
         raise HTTPException(404, "Unknown suggestion")
+    if user.role == "manager" and user.bank_id not in (s.from_bank_id, s.to_bank_id):
+        raise HTTPException(403, "Not your suggestion")
     if s.status != "proposed":
         raise HTTPException(409, f"Suggestion already {s.status}")
     if body.decision == "reject" and not (body.reason and body.reason.strip()):

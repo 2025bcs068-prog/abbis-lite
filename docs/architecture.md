@@ -69,10 +69,9 @@ Unit lifecycle: collected -> screened -> available -> issued | discarded. Positi
 - **Monitoring (planned):** compare forecasts to realised demand weekly; alert on WAPE drift and retrain.
 
 ## 7. Security
-Implemented: pseudonymous donor codes, audit trail on every state change, input validation, synthetic data only.
-Planned: JWT authentication, role-based access (clinic / manager / hospital / coordinator),
-per-facility data scoping, TLS, encryption at rest, rate limiting.
-**Current limitation:** the actor is taken from an `X-Actor` header as a placeholder. Real identity comes with authentication.
+Implemented: JWT authentication (60-minute tokens), scrypt password hashing, role-based access control (admin / coordinator / manager / clinic / hospital), per-facility scoping, login lockout after 5 failures (15 min), role re-read from the database on every request so deactivation is immediate, audit trail carrying the authenticated identity, strict Content-Security-Policy on the dashboard, input validation, pseudonymous donor codes, synthetic data only.
+Planned: TLS termination, encryption at rest, per-IP rate limiting, refresh tokens, two-bank confirmation for transfers, secrets management.
+**Known trade-off:** per-username lockout can be abused to lock out a user; per-IP limits are planned.
 
 ## 8. Where it can fail (and the response)
 | Failure | Effect | Handling |

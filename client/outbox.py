@@ -7,9 +7,9 @@ import uuid
 
 
 class Outbox:
-    def __init__(self, base_url="http://127.0.0.1:8000", db_path="client_outbox.db", actor="clinic-1"):
+    def __init__(self, base_url="http://127.0.0.1:8000", db_path="client_outbox.db", token=None):
         self.base_url = base_url.rstrip("/")
-        self.actor = actor
+        self.token = token
         self.db = sqlite3.connect(db_path)
         self.db.execute("""CREATE TABLE IF NOT EXISTS outbox (
             seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,18 +47,22 @@ class Outbox:
     def _send(self, method, path, body):
         req = urllib.request.Request(
             self.base_url + path, data=json.dumps(body).encode(), method=method,
-            headers={"Content-Type": "application/json", "X-Actor": self.actor})
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {self.token}"})
         with urllib.request.urlopen(req, timeout=5) as resp:
             return json.loads(resp.read())
 
     def sync(self):
-        """Replay pending ops in order. Stops at the first network/server failure to preserve ordering."""
+        """Replay pending ops in order. Stops at the first network/server/auth failure to preserve ordering."""
         stats = {"synced": 0, "rejected": 0, "stopped": None}
         for seq, _op_id, method, path, body in self.pending():
             try:
                 self._send(method, path, json.loads(body))
             except urllib.error.HTTPError as e:      # must come before URLError (it is a subclass)
                 detail = e.read().decode()[:300]
+                if e.code == 401:                    # token expired/invalid: keep the queue, log in again, retry
+                    self._mark(seq, "pending", f"401: {detail}")
+                    stats["stopped"] = "authentication required"
+                    break
                 if 400 <= e.code < 500:              # business conflict: needs a human, never auto-retry
                     self._mark(seq, "rejected", f"{e.code}: {detail}")
                     stats["rejected"] += 1

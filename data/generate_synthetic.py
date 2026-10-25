@@ -80,3 +80,5 @@ def main(days: int = 365):
 
 if __name__ == "__main__":
     main()
+    from data.create_users import main as seed_users
+    seed_users()
