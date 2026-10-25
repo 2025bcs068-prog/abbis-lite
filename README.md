@@ -1,5 +1,7 @@
 # ABBIS-Lite
 
+[![CI](https://github.com/2025bcs068-prog/abbis-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/2025bcs068-prog/abbis-lite/actions)
+
 A working technical slice of an interoperable blood-bank information system for African health systems,
 built for the Terumo BCT Africa Hackathon 2026. **All data is synthetic. No real donor or patient records.**
 
